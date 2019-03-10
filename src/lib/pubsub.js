@@ -8,7 +8,7 @@ class PubSub {
    * @memberof PubSub
    */
   subscribe(event, callback) {
-    if (event in this.events) {
+    if (!(event in this.events)) {
       this.events[event] = [];
     }
     return this.events[event].push(callback);
@@ -19,7 +19,7 @@ class PubSub {
    * @memberof PubSub
    */
   publish(event, data = {}) {
-    if (!event in this.events) {
+    if (!(event in this.events)) {
       return [];
     }
     return this.events[event].map(callback => callback(data));
