@@ -19,18 +19,76 @@ class Store {
     }
 
     // Store 객체가 모든 변화를 추적하는 방법
+    // set 연산을 trapping
+    // state 의 set을 캐치하여 변경에 대해 컨트롤(거부)할 수 있는 기회 제공.
     this.state = new Proxy((params.state || {}), {
       set: function(state, key, value) {
         state[key] = value;
 
         console.log(`stateChange: ${key}: ${value}`)
 
-        this.events.publish()
+        this.events.publish('stateChange', this.state);
+
+        // mutation 상태가 아니면 상태가 수동 업데이트 되었음을 의미.
+        if(this.status !== 'mutation') {
+          console.warn(`You should use a mutation to set ${key}`)
+        }
+
+        this.status = 'resting';
+
+        return true;
       }
     });
   }
 
-  
+  /**
+   *@desc action을 찾곶 ㅗㄴ재한다면, 상태를 설정하고 모든 로그를 유지하는 로깅그룹 생성, 액션 호출
+   *
+   * @param {*} actionKey
+   * @param {*} payload
+   * @returns
+   * @memberof Store
+   */
+  dispatch(actionKey, payload) {
+    if( typeof this.actions[actionKey] !== 'function') {
+      console.error(`Action ${actionKey} doesn't exist.`);
+      return false;
+    }
+
+    console.groupCollapsed(`ACTION: ${actionKey}`);
+
+    this.status = 'action';
+
+    this.actions[actionKey](this, payload);
+
+    console.groupEnd();
+
+    return true;
+  }
+
+
+/**
+ * @desc mutation이 발견되면, 그것을 실행하고 리턴값으로 새로운 state를 얻는다.
+ *
+ * @param {*} mutationKey
+ * @param {*} payload
+ * @returns
+ * @memberof Store
+ */
+commit(mutationKey, payload) {
+    if(typeof this.mutations[mutationKey] !== 'function') {
+      console.log(`Mutation ${mutationKey} doesn't exist`);
+      return false;
+    }
+
+    this.status = 'mutation';
+
+    const nextState = this.mutations[mutationKey](this.state, payload);
+
+    this.state = Object.assign(this.state, nextState);
+
+    return true;
+  }
   
 }
 
